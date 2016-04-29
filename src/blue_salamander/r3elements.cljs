@@ -3,6 +3,19 @@
   (:require [goog.events :as events]
             [clojure.string :as string]))
 
+;;
+;; provides convenient definitions for threejs nodes. Instead of going:
+;;
+;; (js/React.createElement (js/ReactTHREE.Scene #js {} ....))
+;;
+;; you go:
+;;
+;; < require this ns as 'r3' >
+;;
+;; (r3/scene {} ...)
+;;
+
+
 (defn element-args [opts children]
   (cond
     (nil? opts) [nil children]
