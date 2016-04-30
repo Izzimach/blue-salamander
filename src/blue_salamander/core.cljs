@@ -3,68 +3,106 @@
             [goog.dom :as gdom]
             [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]
-            [blue-salamander.r3elements :as r3]))
+            [blue-salamander.r3elements :as r3]
+            [blue-salamander.keypresses :as keypress]
+            [blue-salamander.r3utils :as r3u :refer [origin] :refer-macros [vec3]]))
 
 (enable-console-print!)
 
 (println "Edits to this text should show up in your developer console.")
 
-;; define your app data so that it doesn't get over-written on reload
+;;
+;; key-pressed is a atom containing a set of the
+;; currently pressed key codes.
+;;
 
-(defonce app-state (atom {:text "Hello world!"}))
+(defonce keys-pressed (atom #{}))
+(keypress/track-keypresses-in-atom keys-pressed)
+
+
+;;
+;; define your app data so that it doesn't get over-written on reload
+;;
+
+(defonce app-state (atom {:camerapos (vec3 400 200 400)
+                          :player/position origin
+                          :screen/width 600
+                          :screen/height 400
+                          :count 1}))
+
+(defn read-fn
+  [{:keys [state] :as env} key params]
+  (let [st @state]
+    (if-let [[_ v] (find st key)]
+      {:value v}
+      {:value :not-found})))
+
+(defn mutate-fn
+  [{:keys [state] :as env} key params]
+  (if (= 'increment key)
+    {:value {:keys [:count]}
+     :action #(swap! state update-in [:count] inc)}
+    {:value :not-found}))
+
+(def game-parser (om.next/parser {:read read-fn :mutate mutate-fn}))
+
+
+
 (def boxgeometry (js/THREE.BoxGeometry. 100 100 100))
 (def cupcaketexture (js/THREE.ImageUtils.loadTexture "assets/lollipopGreen.png"))
 (def cupcakematerial (js/THREE.MeshBasicMaterial. #js {:map cupcaketexture}))
-(def maincameraelement (r3/perspectivecamera {:name "maincamera"
-                                              :key 'camera'
-                                              :fov 75
-                                              :aspect 1.33
-                                              :near 1
-                                              :far 5000
-                                              :position (js/THREE.Vector3. 400 200 400)
-                                              :lookat (js/THREE.Vector3. 0 0 0)}))
 
 
 
-
-
-(defui ThreeScene
+(def playercamera-defaultprops {:name "playercamera"
+                                :key 'camera'
+                                :fov 75
+                                :near 1
+                                :far 5000
+                                })
+(defui PlayerCamera
+  static om/IQuery
+  (query [this]
+         [:screen/width :screen/height :player/position])
   Object
   (render [this]
-          (r3/renderer {:width 600 :height 400 :background 0x8080a0}
-                       (r3/scene {:width 600 :height 400 :camera "maincamera"}
-                                 [maincameraelement
-                                  (r3/mesh {:key 'box'
-                                            :position (js/THREE.Vector3. 0 0 0)
-                                            :geometry boxgeometry
-                                            :material cupcakematerial})]))))
+          (let [{width :screen/width height :screen/height position :player/position} (om/props this)
+                aspect (/ width height)
+                lookat origin
+                curprops (assoc playercamera-defaultprops :aspect aspect :position position :lookat lookat)]
+            (r3/perspectivecamera curprops))))
+(def playercamera (om/factory PlayerCamera {:keyfn :key}))
 
-(defui Counter
+(defui GameScreen
+  static om/IQuery
+  (query [this]
+         [:screen/width :screen/height :player/position])
   Object
   (render [this]
-          (let [{:keys [count]} (om/props this)]
-            (dom/div nil
-                     (dom/span nil (str "Count: " count))
-                     (dom/button #js {:onClick
-                                      (fn [e]
-                                        (swap! app-state update-in [:count] inc))}
-                                 "Click me")))))
+          (let [props (om/props this)
+                {width :screen/width height :screen/height} props
+                rendererprops {:width width :height height}
+                sceneprops (assoc rendererprops :camera "playercamera")]
+            (r3/renderer rendererprops
+                         (r3/scene sceneprops
+                                   [(playercamera props)
+                                    (r3/mesh {:key 'box'
+                                              :position origin
+                                              :geometry boxgeometry
+                                              :material cupcakematerial})])))))
+
+
 
 (def reconciler
   (om/reconciler {:state app-state
+                  :parser game-parser
                   :root-render js/ReactTHREE.render
                   :root-unmount js/ReactTHREE.unmountComponentAtNode}))
 
 (om/add-root! reconciler
-              ThreeScene
+              GameScreen
               (gdom/getElement "app"))
 
-(defui HelloWorld
-  Object
-  (render [this]
-          (dom/div nil "Hello, world!")))
-
-(def hello (om/factory HelloWorld))
 
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on
