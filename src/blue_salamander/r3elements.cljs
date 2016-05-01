@@ -27,3 +27,12 @@
 (abbrev/defn-r3-element Mesh)
 (abbrev/defn-r3-element Object3D)
 (abbrev/defn-r3-element PerspectiveCamera)
+
+(def Origin (js/THREE.Vector3. 0 0 0))
+
+(defn Vector3 [x y z] (js/THREE.Vector3. x y z))
+
+(defn vec3->Vector3
+  "Convert a thi.ng vec3 into a threejs Vector3"
+  [[x y z]]
+  (js/THREE.Vector3. x y z))

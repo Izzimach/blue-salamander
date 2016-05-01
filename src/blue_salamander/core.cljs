@@ -3,9 +3,11 @@
             [goog.dom :as gdom]
             [om.next :as om :refer-macros [defui]]
             [om.dom :as dom]
-            [blue-salamander.r3elements :as r3]
+            [blue-salamander.r3elements :as r3 :include-macros]
             [blue-salamander.keypresses :as keypress]
-            [blue-salamander.r3utils :as r3u :refer [origin] :refer-macros [vec3]]))
+            [blue-salamander.r3utils :as r3u :include-macros]
+            [thi.ng.geom.core :as g]
+            [thi.ng.geom.core.vector :as v :refer [vec2 vec3]]))
 
 (enable-console-print!)
 
@@ -25,7 +27,7 @@
 ;;
 
 (defonce app-state (atom {:camerapos (vec3 400 200 400)
-                          :player/position origin
+                          :player/position (vec3 0 0 0)
                           :screen/width 600
                           :screen/height 400
                           :count 1}))
@@ -66,10 +68,14 @@
          [:screen/width :screen/height :player/position])
   Object
   (render [this]
-          (let [{width :screen/width height :screen/height position :player/position} (om/props this)
+          (let [{width :screen/width height :screen/height playerpos :player/position} (om/props this)
                 aspect (/ width height)
-                lookat origin
-                curprops (assoc playercamera-defaultprops :aspect aspect :position position :lookat lookat)]
+                lookat playerpos
+                camerapos  (g/+ (vec3 1 1 1) (vec3 400 200 200))
+                curprops (assoc playercamera-defaultprops
+                                :aspect aspect
+                                :position (r3/vec3->Vector3 camerapos)
+                                :lookat (r3/vec3->Vector3 lookat))]
             (r3/perspectivecamera curprops))))
 (def playercamera (om/factory PlayerCamera {:keyfn :key}))
 
@@ -87,7 +93,7 @@
                          (r3/scene sceneprops
                                    [(playercamera props)
                                     (r3/mesh {:key 'box'
-                                              :position origin
+                                              :position r3/Origin
                                               :geometry boxgeometry
                                               :material cupcakematerial})])))))
 
