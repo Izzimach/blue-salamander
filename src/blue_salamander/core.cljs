@@ -5,6 +5,9 @@
             [om.dom :as dom]
             [blue-salamander.r3elements :as r3 :include-macros]
             [blue-salamander.keypresses :as k]
+            [blue-salamander.collision :as coll]
+            [blue-salamander.player-movement :as movement]
+            [blue-salamander.blockmaze :as maze]
             [thi.ng.geom.core :as g]
             [thi.ng.geom.core.vector :as v :refer [vec2 vec3]]))
 
@@ -17,10 +20,6 @@
 ;; currently pressed key codes.
 ;;
 
-(defonce keys-pressed (atom #{}))
-(k/track-keypresses-in-atom keys-pressed)
-
-
 ;;
 ;; define your app data so that it doesn't get over-written on reload
 ;;
@@ -28,16 +27,12 @@
 (def origin (vec3 0 0 0))
 (def unity (vec3 1 1 1))
 
-(defonce app-state (atom {:player/position (vec3 300 0 0)
+
+(defonce app-state (atom {:player/position (vec3 3 0 0)
                           :screen/width 600
                           :screen/height 400
                           :count 1
-                          :blockdata [
-                                      {:position origin :size unity}
-                                      {:position (vec3 0 0 100) :size unity}
-                                      {:position (vec3 100 0 100) :size unity}
-                                      {:position (vec3 0 0 200) :size unity}
-                                      ]}))
+                          :blockdata (maze/build-block-maze 3 3)}))
 
 (defn read-fn
   [{:keys [state] :as env} key params]
@@ -55,19 +50,27 @@
 
 (def game-parser (om.next/parser {:read read-fn :mutate mutate-fn}))
 
+(def boxgeometry (js/THREE.BoxGeometry. 1 1 1))
 
-
-(def boxgeometry (js/THREE.BoxGeometry. 100 100 100))
 (def cupcaketexture (js/THREE.ImageUtils.loadTexture "assets/cupCake.png"))
+(def smiletexture (js/THREE.ImageUtils.loadTexture "assets/smileImage.png"))
+(def lollitexture (js/THREE.ImageUtils.loadTexture "assets/lollipopGreen.png"))
+
 (def cupcakematerial (js/THREE.MeshBasicMaterial. #js {:map cupcaketexture}))
+(def smilematerial (js/THREE.MeshBasicMaterial. #js {:map smiletexture}))
+(def lollimaterial (js/THREE.MeshBasicMaterial. #js {:map lollitexture}))
+(def block-materials
+  {:smile smilematerial
+   :cupcake cupcakematerial
+   :lollipop lollimaterial})
 
 
 
 (def playercamera-defaultprops {:name "playercamera"
                                 :key 'camera'
                                 :fov 75
-                                :near 1
-                                :far 5000
+                                :near 0.1
+                                :far 500
                                 })
 (defui PlayerCamera
   static om/IQuery
@@ -80,7 +83,7 @@
                 playerpos (vec3 px py pz)
                 aspect (/ width height)
                 lookat playerpos
-                camerapos (g/+ playerpos (vec3 -200 400 -200))
+                camerapos (g/+ playerpos (vec3 -3 8 -3))
                 curprops (assoc playercamera-defaultprops
                                 :aspect aspect
                                 :position (r3/vec3->Vector3 camerapos)
@@ -97,16 +100,16 @@
           (let [{playerpos :player/position :as props} (om/props this)]
             (r3/mesh {:position (r3/vec3->Vector3  playerpos)
                       :geometry boxgeometry
-                      :material cupcakematerial}))))
+                      :material smilematerial}))))
 (def playercharacter (om/factory PlayerCharacter))
 
 (defn blockdata->meshprops [block]
-  (let [{:keys [position size]} block
+  (let [{{:keys [center size]} :geometry materialname :material} block
         [sx sy sz] size
-        scale (js/THREE.Vector3 (/ sx 100) (/ sy 100) (/ sz 100))]
-    {:position (r3/vec3->Vector3 position)
+        scale (js/THREE.Vector3. sx sy sz)]
+    {:position (r3/vec3->Vector3 center)
      :geometry boxgeometry
-     :material cupcakematerial
+     :material (get block-materials materialname)
      :scale scale}))
 
 (defui LavaLand
@@ -120,6 +123,7 @@
 
 (defui GameScreen
   static om/IQuery
+
   (query [this]
          [:screen/width :screen/height :player/position :blockdata])
   Object
@@ -143,16 +147,11 @@
                   :root-render js/ReactTHREE.render
                   :root-unmount js/ReactTHREE.unmountComponentAtNode}))
 
-(om/add-root! reconciler
-              GameScreen
-              (gdom/getElement "app"))
-
 (defn player-input []
-  (let [curkeys @keys-pressed
-        left (contains? curkeys :left-arrow)
-        right (contains? curkeys :right-arrow)
-        up (contains? curkeys :up-arrow)
-        down (contains? curkeys :down-arrow)
+  (let [left (k/is-key-pressed? :left-arrow)
+        right (k/is-key-pressed? :right-arrow)
+        up (k/is-key-pressed? :up-arrow)
+        down (k/is-key-pressed? :down-arrow)
         dx (cond
              left 1
              right -1
@@ -166,16 +165,26 @@
 (defn game-tick-fn
   [state newtime]
   (let [playerpos (:player/position state)
+        boxes (:blockdata state)
         [dx dy] (player-input)
-        newposition (g/+ playerpos (vec3 dx 0 dy))]
-    (assoc state :player/position newposition)))
+        desired-position (g/+ playerpos (vec3 0 -0.1 0) (g/*  (vec3 dx 0 dy) 0.02))
+        player-radius 0.55
+        corrected-sphere (movement/collide-sphere-with-boxes playerpos desired-position player-radius boxes)
+        new-position (:center corrected-sphere)]
+    (assoc state :player/position new-position)))
+
 
 (def tickID :off)
+(def queued-swap-fn nil)
 
 (defn tick-fn [highrestime]
   (do 
     #_(js/console.log "tick")
     (set! tickID (js/requestAnimationFrame tick-fn))
+    (if queued-swap-fn
+      (do 
+        (swap! app-state queued-swap-fn)
+        (set! queued-swap-fn nil)))
     (swap! app-state game-tick-fn highrestime)))
 
 (defn start-ticking []
@@ -188,8 +197,22 @@
       (js/cancelAnimationFrame tickID)
       (set! tickID :off))))
 
+(defonce initial-load? false)
+
+(om/add-root! reconciler
+              GameScreen
+              (gdom/getElement "app"))
+
+(if-not initial-load?
+  (do
+    (k/start-keypress-tracking)
+    (start-ticking)
+    (set! initial-load? true)))
+
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on
   ;; your application
-  (swap! app-state update-in [:__figwheel_counter] inc)
+  ;;(swap! app-state update-in [:__figwheel_counter] inc)
+  #_(swap! app-state assoc :blockdata (maze/build-block-maze 10 1))
+  (set! queued-swap-fn #(assoc % :blockdata (maze/build-block-maze 3 3)))
   )
