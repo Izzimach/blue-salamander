@@ -51,16 +51,11 @@
 
 
 (def tickID :off)
-(def queued-swap-fn nil)
 
 (defn tick-fn [highrestime]
   (do 
     #_(js/console.log "tick")
     (set! tickID (js/requestAnimationFrame tick-fn))
-    (if queued-swap-fn
-      (do 
-        (swap! app-state queued-swap-fn)
-        (set! queued-swap-fn nil)))
     (swap! app-state game-tick-fn highrestime)))
 
 (defn start-ticking []
