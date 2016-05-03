@@ -2,25 +2,6 @@
   (:require [blue-salamander.collision :as coll]
             [thi.ng.geom.core.vector :as v :refer [vec2 vec3]]))
 
-(defrecord Block [geometry material])
-
-(def unity (vec3 1 1 1))
-
-(defn gen-block [x y blocksize]
-  (Block. {:center (vec3 x 0 y) :size (vec3 blocksize 1 blocksize)} :cupcake))
-
-(defn gen-edge-walls [maze-size blocksize]
-  (let [scalevec (vec3 blocksize blocksize blocksize)
-        maze-extent (* (- maze-size 0.5) blocksize)
-        maze-min (- maze-extent)
-        maze-max maze-extent
-        block-at (fn [x y] (gen-block x y blocksize))]
-    (mapcat (fn [x] (let [bx (- (* x blocksize) maze-max)]
-                      [(block-at bx maze-min)
-                       #_(block-at bx maze-max)
-                       (block-at maze-min bx)
-                       #_(block-at maze-max bx)]))
-            (range (+ 1 (* maze-size 2))))))
 
 ;;
 ;; generate a standard maze made up of n * n blocks
@@ -106,9 +87,22 @@
      (iterate #(try-to-add-branch % maze-size) initial-tiles)
      branch-attempts)))
 
+;;
+;; convert the maze data into geometry descriptions for rendering and collision
+;;
+
+(def unity (vec3 1 1 1))
+
+(defrecord Block [geometry material])
+
+(defn gen-block [x y blocksize]
+  (Block. {:center (vec3 x 0 y) :size (vec3 blocksize 1 blocksize)} :lavarock))
+
+
+
 (defn mazetile->blocks
   [[[tile-x tile-y] tile-data] maze-size blocksize]
-  (let [maze-offset (* maze-size  blocksize 0.5)
+  (let [maze-offset (* (- maze-size 1) blocksize)
         base-x (- (* tile-x blocksize 2) maze-offset)
         base-y (- (* tile-y blocksize 2) maze-offset)
         east-x (+ base-x blocksize)
@@ -128,12 +122,31 @@
   (mapcat #(mazetile->blocks % maze-size blocksize) mazedata))
 
 ;;
+;; mazedata->blocks generates some of the edge walls but not the
+;; ones in the north & west sides. Instead of adding special-case code
+;; into mazetile->blocks we generate them manually here.
+;;
+
+(defn gen-edge-walls [maze-size blocksize]
+  (let [scalevec (vec3 blocksize blocksize blocksize)
+        maze-offset (* maze-size blocksize)
+        maze-min (- maze-offset)
+        maze-max maze-offset
+        block-at (fn [x y] (gen-block x y blocksize))]
+    (mapcat (fn [x] (let [bx (- (* x blocksize) maze-max)]
+                      [(block-at bx maze-min)
+                       #_(block-at bx maze-max)
+                       (block-at maze-min bx)
+                       #_(block-at maze-max bx)]))
+            (range (+ 1 (* maze-size 2))))))
+
+;;
 ;; build up a maze of blocks
 ;;
 
 (defn build-block-maze [size blocksize]
   (let [totalsize (* size blocksize 2)
-        floor    (Block. {:center (vec3 0 -2 0) :size (vec3 totalsize 3 totalsize)} :lollipop)
+        floor    (Block. {:center (vec3 0 -2 0) :size (vec3 totalsize 3 totalsize)} :lavarock)
         edges (gen-edge-walls size blocksize)
         mazedata (gen-maze size)]
     (concat [floor]
