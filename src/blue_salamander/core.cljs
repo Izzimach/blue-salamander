@@ -72,16 +72,16 @@
 
 (if initial-load?
   (do
+    (gfx/mount-graphics app-state)
     (k/start-keypress-tracking)
     (start-ticking)
     (set! initial-load? false)))
 
-(gfx/mount-graphics app-state)
+
 
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on
   ;; your application
   ;;(swap! app-state update-in [:__figwheel_counter] inc)
   #_(swap! app-state assoc :blockdata (maze/build-block-maze 10 1))
-  (set! queued-swap-fn #(assoc % :blockdata (maze/build-block-maze 5 3)))
   )
