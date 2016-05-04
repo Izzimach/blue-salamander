@@ -146,18 +146,19 @@ and values as the texture."
 (defui PlayerCharacter
   static om/IQuery
   (query [this]
-         [:player/position :assets/meshes])
+         [:player/position :player/rotation :assets/meshes])
   Object
   (render [this]
-          (let [{playerpos :player/position :as props} (om/props this)
+          (let [{playerpos :player/position playerrot :player/rotation :as props} (om/props this)
                 [geometry material] (get-in props [:assets/meshes "assets/salamander.json"])]
             (if (nil? geometry)
               (r3/object3d {:key "playermesh"})
               (r3/mesh {:key "playermesh"
                         :position (r3/vec3->Vector3  playerpos)
+                        :rotation playerrot
                         :geometry geometry
                         :material material
-                        :scale 0.15})))))
+                        :scale 0.18})))))
 (def playercharacter (om/factory PlayerCharacter {:keyfn :key}))
 
 (defn blockdata->meshprops [react-key block]
@@ -188,20 +189,21 @@ and values as the texture."
           (r3/object3d {:key "light_container"}
                        (r3/ambientlight {:key "overall_light" :color 0xffffff
                                             :groundColor 0xff8080
-                                            :intensity 0.1})
+                                            :intensity 1.0})
                        [(r3/directionallight {:key "sun" :color 0xa0ffff :intensity 10})])))
 (def lights (om/factory SceneLighting {:keyfn :key}))
 
 (defui GameScreen
   static om/IQuery
   (query [this]
-         [:screen/width :screen/height :player/position :blockdata :assets/meshes :assets/textures])
+         [:screen/width :screen/height :player/position :player/rotation :blockdata :assets/meshes :assets/textures])
   Object
   (render [this]
           (let [props (om/props this)
                 {width :screen/width
                  height :screen/height
                  playerpos :player/position
+                 playerrot :player/rotation
                  texture-assets :assets/textures
                  mesh-assets :assets/meshes} props
                 rendererprops {:width width :height height}
@@ -217,6 +219,7 @@ and values as the texture."
                                       (playercamera (assoc props :key "playercamera"))
                                       (playercharacter {:key "playercharacter"
                                                         :player/position playerpos
+                                                        :player/rotation playerrot
                                                         :assets/meshes mesh-assets})
                                       (lava-land (assoc props :key "level"))
                                       (lights {:key "lights"})

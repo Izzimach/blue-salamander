@@ -19,6 +19,7 @@
 
 
 (defonce app-state (atom {:player/position (vec3 3 0 0)
+                          :player/rotation (js/THREE.Quaternion.)
                           :screen/width 600
                           :screen/height 400
                           :count 1
@@ -43,13 +44,19 @@
 (defn game-tick-fn
   [state newtime]
   (let [playerpos (:player/position state)
+        playerrot (:player/rotation state)
         boxes (:blockdata state)
         [dx dy] (player-input)
         desired-position (g/+ playerpos (vec3 0 -0.1 0) (g/*  (vec3 dx 0 dy) 0.02))
         player-radius 0.55
         corrected-sphere (movement/collide-sphere-with-boxes playerpos desired-position player-radius boxes)
-        new-position (:center corrected-sphere)]
-    (assoc state :player/position new-position)))
+        new-position (:center corrected-sphere)
+        new-rotation (if (and (= 0 dx) (= 0 dy)) ;; if not moving keep previous rotation
+                             playerrot
+                             (js/THREE.Euler. 0 (- Math.PI (js/Math.atan2 dy dx)) 0))]
+    (assoc state
+           :player/position new-position
+           :player/rotation new-rotation)))
 
 
 (def tickID :off)
