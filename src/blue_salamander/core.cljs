@@ -1,9 +1,11 @@
 (ns blue-salamander.core
+  (:require-macros [cljs.core.async.macros :as async-macros :refer [go]])
   (:require [blue-salamander.graphics :as gfx]
             [blue-salamander.keypresses :as k]
             [blue-salamander.collision :as coll]
             [blue-salamander.player-movement :as movement]
             [blue-salamander.blockmaze :as maze]
+            [cljs.core.async :as async :refer [chan >! <!]]
             [thi.ng.geom.core :as g]
             [thi.ng.geom.core.vector :as v :refer [vec2 vec3]]))
 
@@ -74,7 +76,14 @@
   (do
     (gfx/mount-graphics app-state)
     (k/start-keypress-tracking)
-    (start-ticking)
+    ;; loaders returns channels. Once assets are loaded they are sent over the channel.
+    (let [mesh-chan (gfx/load-meshes ["assets/salamander.json"])
+          tex-chan (gfx/load-textures gfx/texture-assets)]
+      ;; once assets are loaded, put them into the app-state
+      (go (swap! app-state assoc :assets/textures (<! tex-chan))
+          (swap! app-state assoc :assets/meshes (<! mesh-chan))
+          ;; don't start the ticks until assets are loaded
+          (start-ticking)))
     (set! initial-load? false)))
 
 
@@ -83,5 +92,5 @@
   ;; optionally touch your app-state to force rerendering depending on
   ;; your application
   ;;(swap! app-state update-in [:__figwheel_counter] inc)
-  #_(swap! app-state assoc :blockdata (maze/build-block-maze 10 1))
-  )
+  (gfx/mount-graphics app-state)
+  #_(swap! app-state assoc :blockdata (maze/build-block-maze 10 1)))
