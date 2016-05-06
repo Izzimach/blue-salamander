@@ -1,6 +1,5 @@
 (ns blue-salamander.blockmaze
-  (:require [blue-salamander.collision :as coll]
-            [thi.ng.geom.core.vector :as v :refer [vec2 vec3]]))
+  (:require [thi.ng.geom.core.vector :as v :refer [vec2 vec3]]))
 
 
 ;;
@@ -98,13 +97,19 @@
 (defn gen-block [x y blocksize]
   (Block. {:center (vec3 x 0 y) :size (vec3 blocksize 1 blocksize)} :lavarock))
 
-
-
-(defn mazetile->blocks
-  [[[tile-x tile-y] tile-data] maze-size blocksize]
+(defn tilecoord->spacecoord
+  [[tile-x tile-y] maze-size blocksize]
   (let [maze-offset (* (- maze-size 1) blocksize)
         base-x (- (* tile-x blocksize 2) maze-offset)
-        base-y (- (* tile-y blocksize 2) maze-offset)
+        base-y (- (* tile-y blocksize 2) maze-offset)]
+    (vec3 base-x 0 base-y)))
+
+(defn mazetile->blocks
+  [[tile-coord tile-data] maze-size blocksize]
+  (let [;;maze-offset (* (- maze-size 1) blocksize)
+        ;;base-x (- (* tile-x blocksize 2) maze-offset)
+        ;;base-y (- (* tile-y blocksize 2) maze-offset)
+        [base-x _ base-y] (tilecoord->spacecoord tile-coord maze-size blocksize)
         east-x (+ base-x blocksize)
         south-y (+ base-y blocksize)
         east-open? (:e tile-data)
@@ -141,14 +146,25 @@
             (range (+ 1 (* maze-size 2))))))
 
 ;;
+;; returns lazy seq of randomly chosen spots in the maze
+;;
+
+(defn placement-spots-seq [maze maze-size blocksize place-count]
+  (as-> maze $
+    (keys $)
+    (shuffle $)
+    (map #(tilecoord->spacecoord % maze-size blocksize) $)))
+
+;;
 ;; build up a maze of blocks
 ;;
 
-(defn build-block-maze [size blocksize]
+
+(defn blocks-for-maze [mazedata size blocksize]
   (let [totalsize (* size blocksize 2)
         floor    (Block. {:center (vec3 0 -2 0) :size (vec3 totalsize 3 totalsize)} :lavarock)
         edges (gen-edge-walls size blocksize)
-        mazedata (gen-maze size)]
+        inner-blocks (mazedata->blocks mazedata size blocksize)]
     (concat [floor]
             edges
-            (mazedata->blocks mazedata size blocksize))))
+            inner-blocks)))

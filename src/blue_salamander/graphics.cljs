@@ -161,7 +161,7 @@ and values as the texture."
                         :scale 0.18})))))
 (def playercharacter (om/factory PlayerCharacter {:keyfn :key}))
 
-(defn blockdata->meshprops [react-key block]
+(defn blockdata->meshprops [block react-key]
   (let [{{:keys [center size]} :geometry materialname :material} block
         [sx sy sz] size
         scale (js/THREE.Vector3. sx sy sz)]
@@ -175,12 +175,30 @@ and values as the texture."
   Object
   (render [this]
           (let [{:keys [blockdata]} (om/props this)
-                datatomesh (fn [block index] (->> block
+                datatomesh (fn [block index] (-> block
                                                   (blockdata->meshprops index)
                                                   r3/mesh))]
             (r3/object3d {:key "blocks"}
                          (mapv datatomesh blockdata (iterate inc 1))))))
 (def lava-land (om/factory LavaLand {:keyfn :key}))
+
+(defn orbdata->orbprops [orbdata index]
+  {:key index
+   :position (r3/vec3->Vector3  (:position orbdata))
+   :rotation (js/THREE.Euler. 0 (:rotation orbdata) 0)
+   :geometry boxgeometry
+   :material (get block-materials :smile)
+   :scale 0.6})
+
+(defui Orbs
+  Object
+  (render [this]
+          (let [{:keys [orbs]} (om/props this)
+                datatoorb (fn [orb index] (r3/mesh (orbdata->orbprops orb index)))]
+            (r3/object3d {:key "orbs"}
+                         (mapv datatoorb orbs (iterate inc 1))))))
+(def orbs (om/factory Orbs {:keyfn :key}))
+
 
 (defui SceneLighting
   Object
@@ -193,10 +211,11 @@ and values as the texture."
                        [(r3/directionallight {:key "sun" :color 0xa0ffff :intensity 10})])))
 (def lights (om/factory SceneLighting {:keyfn :key}))
 
+
 (defui GameScreen
   static om/IQuery
   (query [this]
-         [:screen/width :screen/height :player/position :player/rotation :blockdata :assets/meshes :assets/textures])
+         [:screen/width :screen/height :player/position :player/rotation :blockdata :orbs :assets/meshes :assets/textures])
   Object
   (render [this]
           (let [props (om/props this)
@@ -205,7 +224,8 @@ and values as the texture."
                  playerpos :player/position
                  playerrot :player/rotation
                  texture-assets :assets/textures
-                 mesh-assets :assets/meshes} props
+                 mesh-assets :assets/meshes
+                 orbdata :orbs} props
                 rendererprops {:width width :height height}
                 sceneprops (assoc rendererprops :camera "playercamera")]
             ;; until assets are loaded, just say "loading..."
@@ -223,7 +243,8 @@ and values as the texture."
                                                         :assets/meshes mesh-assets})
                                       (lava-land (assoc props :key "level"))
                                       (lights {:key "lights"})
-                                      ]))))))
+                                      (orbs {:orbs orbdata})]
+                                     ))))))
 
 
 (defn mount-graphics [app-state]
