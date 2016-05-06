@@ -64,7 +64,8 @@
   [state newtime]
   (-> state
       (move-player 0.02)
-      (orbs/update-orbs)))
+      (orbs/update-orbs)
+      (orbs/collide-player-with-orbs)))
 
 
 (def tickID :off)

@@ -226,7 +226,7 @@ and values as the texture."
                  texture-assets :assets/textures
                  mesh-assets :assets/meshes
                  orbdata :orbs} props
-                rendererprops {:width width :height height}
+                rendererprops {:width width :height height :rapidrender false}
                 sceneprops (assoc rendererprops :camera "playercamera")]
             ;; until assets are loaded, just say "loading..."
             (if (or (nil? texture-assets)

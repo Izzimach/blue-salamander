@@ -16,3 +16,10 @@
 
 (defn update-orbs [state]
   (update-in state [:orbs] #(map rotate-orb %)))
+
+(defn collide-player-with-orbs [state]
+  (let [playerpos (:player/position state)
+        orb-get-distance 1
+        get-orb #(< (g/dist playerpos %) orb-get-distance)]
+    ;; remove any orbs close enough to get
+    (assoc state :orbs (into [] (remove #(get-orb (:position %)) (:orbs state))))))
