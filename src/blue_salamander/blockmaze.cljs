@@ -79,7 +79,7 @@
   (let [empty-tiles (gen-empty-maze maze-size)
         start-coord [0 0]
         initial-tiles (mark-tile-used empty-tiles start-coord)
-        branch-attempts (* maze-size maze-size 10)]
+        branch-attempts (* maze-size maze-size 20)]
     ;; just keep trying to add tiles to the maze by repeatedly branching off of tiles
     ;; already in the maze.
     (nth
