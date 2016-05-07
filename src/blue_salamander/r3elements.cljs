@@ -27,6 +27,7 @@
 (abbrev/defn-r3-element Mesh)
 (abbrev/defn-r3-element Object3D)
 (abbrev/defn-r3-element PerspectiveCamera)
+(abbrev/defn-r3-element OrthographicCamera)
 (abbrev/defn-r3-element HemisphereLight)
 (abbrev/defn-r3-element DirectionalLight)
 (abbrev/defn-r3-element AmbientLight)
