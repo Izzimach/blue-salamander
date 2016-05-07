@@ -2,6 +2,8 @@
   (:require [thi.ng.geom.core :as g]
             [thi.ng.geom.core.vector :as v :refer [vec2 vec3]]))
 
+(def orb-bling-sound (js/Audio. "assets/Pickup_Coin2.wav"))
+
 (defn gen-orb [space-coord]
   {:position space-coord
    :rotation 0
@@ -23,3 +25,11 @@
         get-orb #(< (g/dist playerpos %) orb-get-distance)]
     ;; remove any orbs close enough to get
     (assoc state :orbs (into [] (remove #(get-orb (:position %)) (:orbs state))))))
+
+(defn gather-orbs-with-audio [state]
+  (let [new-state (collide-player-with-orbs state)
+        old-orb-count (count (:orbs state))
+        new-orb-count (count (:orbs new-state))]
+    (if (not= old-orb-count new-orb-count)
+      (.play orb-bling-sound))
+    new-state))

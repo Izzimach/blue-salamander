@@ -65,7 +65,7 @@
   (-> state
       (move-player 0.02)
       (orbs/update-orbs)
-      (orbs/collide-player-with-orbs)))
+      (orbs/gather-orbs-with-audio)))
 
 
 (def tickID :off)
