@@ -212,6 +212,7 @@ and values as the texture."
 (def lights (om/factory SceneLighting {:keyfn :key}))
 
 
+
 (defui GameScreen
   static om/IQuery
   (query [this]
@@ -226,25 +227,33 @@ and values as the texture."
                  texture-assets :assets/textures
                  mesh-assets :assets/meshes
                  orbdata :orbs} props
-                rendererprops {:width width :height height :rapidrender false}
+                rendererprops {:width width :height height :rapidrender false :style {:position "absolute" :top 0 :left 0}}
                 sceneprops (assoc rendererprops :camera "playercamera")]
             ;; until assets are loaded, just say "loading..."
             (if (or (nil? texture-assets)
                     (nil? mesh-assets))
               (dom/div "Loading...")
               ;; assets are all loaded
-              (r3/renderer rendererprops
-                           (r3/scene sceneprops
-                                     [
-                                      (playercamera (assoc props :key "playercamera"))
-                                      (playercharacter {:key "playercharacter"
-                                                        :player/position playerpos
-                                                        :player/rotation playerrot
-                                                        :assets/meshes mesh-assets})
-                                      (lava-land (assoc props :key "level"))
-                                      (lights {:key "lights"})
-                                      (orbs {:orbs orbdata})]
-                                     ))))))
+              (dom/div {}
+                       ;; main 3D scene
+                       (r3/renderer rendererprops
+                            (r3/scene sceneprops
+                                      [
+                                       (playercamera (assoc props :key "playercamera"))
+                                       (playercharacter {:key "playercharacter"
+                                                         :player/position playerpos
+                                                         :player/rotation playerrot
+                                                         :assets/meshes mesh-assets})
+                                       (lava-land (assoc props :key "level"))
+                                       (lights {:key "lights"})
+                                       (orbs {:orbs orbdata})
+                                       ]))
+                       ;; GUI overlay
+                       (dom/div #js
+                                {:style #js {:position "absolute" :top "0px" :left "0px" :color "white" :fontSize 30}}
+                                (str "Orbs remaining: " (count orbdata)))
+
+               )))))
 
 
 (defn mount-graphics [app-state]
