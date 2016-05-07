@@ -14,7 +14,7 @@
                  ;; sure om doesn't pull in the default lib
                  [org.omcljs/om "1.0.0-alpha24" :exclusions [cljsjs/react]]
                  ;; here's our custom react lib that target threejs
-                 [org.clojars.haussman/react-three "0.9.1"]
+                 [org.clojars.haussman/react-three "0.9.2"]
 
                  [thi.ng/geom "0.0.1062"]
                  [thi.ng/geom-core "0.0.908"]
