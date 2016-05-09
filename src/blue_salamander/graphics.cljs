@@ -214,16 +214,19 @@ and values as the texture."
 (defui GameMenu
   Object
   (render [this]
-          (let [mode (:gamemode (om/props this))]
+          (let [{mode :gamemode
+                 w :width
+                 h :height} (om/props this)
+                menutop (* h 0.6)]
             (if (= mode :victorymenu)
               ;; got all orbs, show completion screen
-              (dom/div #js {:style #js {:position "absolute" :top "0px" :left "0px" :color "white" :fontSize 30}}
-                       (dom/div #js {} "All orbs gathered!")
-                       (dom/div #js {} "Press space for new level"))
+              (dom/div #js {:style #js {:display "flex" :flex-direction "column" :position "absolute" :top "0px" :left "0px" :width w :height h :color "white" :fontSize 30}}
+                       (dom/div #js {:style #js {:margin "auto"}} "All orbs gathered!")
+                       (dom/div #js {:style #js {:margin "auto"}} "Press space for new level"))
               ;; otherwise show startup screen
-              (dom/div #js {:style #js {:position "absolute" :top "0px" :left "0px" :color "white" :fontSize 30}}
-                       (dom/div #js {} "Blue Salamander")
-                       (dom/div #js {} "Press space to start"))))))
+              (dom/div #js {:style #js {:display "flex" :flex-direction "column" :position "absolute" :top "0px" :left "0px" :width w :height h :color "white" :fontSize 30}}
+                       (dom/div #js {:style #js { :margin "auto"}} "Blue Salamander")
+                       (dom/div #js {:style #js { :margin "auto"}} "Press space to start"))))))
 (def game-menu (om/factory GameMenu {:keyfn :key}))
 
 
@@ -266,9 +269,9 @@ and values as the texture."
                                                ]))
                        ;; GUI overlay
                        (if (not= mode :playing)
-                         (game-menu {:gamemode mode})
+                         (game-menu {:gamemode mode :width width :height height})
                          (dom/div #js
-                                  {:style #js {:position "absolute" :top "0px" :left "0px" :color "white" :fontSize 30}}
+                                  {:style #js {:position "absolute" :top "20px" :left "20px" :color "white" :fontSize 30}}
                                   (str "Orbs remaining: " (count orbdata)))))))))
 
 
