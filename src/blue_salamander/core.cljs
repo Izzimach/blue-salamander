@@ -21,12 +21,26 @@
 
 (defonce app-state (atom {:player/position (vec3 3 0 0)
                           :player/rotation (js/THREE.Euler. 0 0 0)
+                          :gamemode :startmenu
                           :screen/width 600
                           :screen/height 400
                           :count 1
                           :blockdata []
                           :orbs []}))
 
+(defn init-level [state]
+  (let [maze-size 4
+        blocksize 2.6
+        mazedata  (maze/gen-maze maze-size)
+        mazeblocks (maze/blocks-for-maze mazedata maze-size blocksize)
+        placementspots (maze/placement-spots-seq mazedata maze-size blocksize 5)]
+    (-> state
+        (assoc :blockdata mazeblocks)
+        ;; place player at the first placement spot
+        (assoc :player/position (first placementspots))
+        (assoc :player/rotation (js/THREE.Euler. 0 0 0))
+        ;; place orbs at the 5 following spots
+        (orbs/gen-orbs (take 5 (rest placementspots))))))
 
 (defn player-input []
   (let [left (k/is-key-pressed? :left-arrow)
@@ -47,6 +61,7 @@
   [state dt]
   (let [playerpos (:player/position state)
         playerrot (:player/rotation state)
+        gamemode (:gamemode state)
         boxes (:blockdata state)
         [dx dy] (player-input)
         desired-position (g/+ playerpos (vec3 0 -0.1 0) (g/*  (vec3 dx 0 dy) dt))
@@ -56,14 +71,23 @@
         new-rotation (if (and (= 0 dx) (= 0 dy)) ;; if not moving keep previous rotation
                              playerrot
                              (js/THREE.Euler. 0 (- Math.PI (js/Math.atan2 dy dx)) 0))]
-    (assoc state
-           :player/position new-position
-           :player/rotation new-rotation)))
+    (cond
+      (= :playing gamemode)      (assoc state
+                                    :player/position new-position
+                                    :player/rotation new-rotation)
+      (and (= :startmenu gamemode)
+           (k/is-key-pressed? :spacebar)) (swap! app-state #(assoc % :gamemode :playing))
+      (and (= :victorymenu gamemode)
+           (k/is-key-pressed? :spacebar)) (swap! app-state (fn [state]
+                                                             (-> state
+                                                                 init-level
+                                                                 (assoc :gamemode :playing))))
+      :else state)))
 
 (defn game-tick-fn
   [state newtime]
   (-> state
-      (move-player 0.02)
+      (move-player 0.03)
       (orbs/update-orbs)
       (orbs/gather-orbs-with-audio)))
 
@@ -86,19 +110,7 @@
       (js/cancelAnimationFrame tickID)
       (set! tickID :off))))
 
-(defn init-level [state]
-  (let [maze-size 5
-        blocksize 3
-        mazedata  (maze/gen-maze maze-size)
-        mazeblocks (maze/blocks-for-maze mazedata maze-size blocksize)
-        placementspots (maze/placement-spots-seq mazedata maze-size blocksize 5)]
-    (-> state
-        (assoc :blockdata mazeblocks)
-        ;; place player at the first placement spot
-        (assoc :player/position (first placementspots))
-        (assoc :player/rotation (js/THREE.Euler. 0 0 0))
-        ;; place orbs at the 5 following spots
-        (orbs/gen-orbs (take 5 (rest placementspots))))))
+
 
 (defonce initial-load? true)
 

@@ -211,12 +211,26 @@ and values as the texture."
                        [(r3/directionallight {:key "sun" :color 0xa0ffff :intensity 10})])))
 (def lights (om/factory SceneLighting {:keyfn :key}))
 
+(defui GameMenu
+  Object
+  (render [this]
+          (let [mode (:gamemode (om/props this))]
+            (if (= mode :victorymenu)
+              ;; got all orbs, show completion screen
+              (dom/div #js {:style #js {:position "absolute" :top "0px" :left "0px" :color "white" :fontSize 30}}
+                       (dom/div #js {} "All orbs gathered!")
+                       (dom/div #js {} "Press space for new level"))
+              ;; otherwise show startup screen
+              (dom/div #js {:style #js {:position "absolute" :top "0px" :left "0px" :color "white" :fontSize 30}}
+                       (dom/div #js {} "Blue Salamander")
+                       (dom/div #js {} "Press space to start"))))))
+(def game-menu (om/factory GameMenu {:keyfn :key}))
 
 
 (defui GameScreen
   static om/IQuery
   (query [this]
-         [:screen/width :screen/height :player/position :player/rotation :blockdata :orbs :assets/meshes :assets/textures])
+         [:screen/width :screen/height :player/position :player/rotation :blockdata :orbs :assets/meshes :assets/textures :gamemode])
   Object
   (render [this]
           (let [props (om/props this)
@@ -226,8 +240,9 @@ and values as the texture."
                  playerrot :player/rotation
                  texture-assets :assets/textures
                  mesh-assets :assets/meshes
+                 mode :gamemode
                  orbdata :orbs} props
-                rendererprops {:width width :height height :rapidrender false :style {:position "absolute" :top 0 :left 0}}
+                rendererprops {:width width :height height :rapidrender false}
                 sceneprops (assoc rendererprops :camera "playercamera")]
             ;; until assets are loaded, just say "loading..."
             (if (or (nil? texture-assets)
@@ -237,23 +252,24 @@ and values as the texture."
               (dom/div {}
                        ;; main 3D scene
                        (r3/renderer rendererprops
-                            (r3/scene sceneprops
-                                      [
-                                       (playercamera (assoc props :key "playercamera"))
-                                       (playercharacter {:key "playercharacter"
-                                                         :player/position playerpos
-                                                         :player/rotation playerrot
-                                                         :assets/meshes mesh-assets})
-                                       (lava-land (assoc props :key "level"))
-                                       (lights {:key "lights"})
-                                       (orbs {:orbs orbdata})
-                                       ]))
+                                    (r3/scene sceneprops
+                                              [
+                                               (playercamera (assoc props :key "playercamera"))
+                                               (if (= mode :playing)
+                                                 (playercharacter {:key "playercharacter"
+                                                                   :player/position playerpos
+                                                                   :player/rotation playerrot
+                                                                   :assets/meshes mesh-assets}))
+                                               (lava-land (assoc props :key "level"))
+                                               (lights {:key "lights"})
+                                               (orbs {:orbs orbdata})
+                                               ]))
                        ;; GUI overlay
-                       (dom/div #js
-                                {:style #js {:position "absolute" :top "0px" :left "0px" :color "white" :fontSize 30}}
-                                (str "Orbs remaining: " (count orbdata)))
-
-               )))))
+                       (if (not= mode :playing)
+                         (game-menu {:gamemode mode})
+                         (dom/div #js
+                                  {:style #js {:position "absolute" :top "0px" :left "0px" :color "white" :fontSize 30}}
+                                  (str "Orbs remaining: " (count orbdata)))))))))
 
 
 (defn mount-graphics [app-state]

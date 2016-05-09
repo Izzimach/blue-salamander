@@ -12,7 +12,8 @@
   {:left-arrow 37
    :up-arrow 38
    :right-arrow 39
-   :down-arrow 40})
+   :down-arrow 40
+   :spacebar 32})
 
 ;;
 ;; the keys-pressed atom contains currently pressed keys, stored

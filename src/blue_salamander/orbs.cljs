@@ -30,6 +30,11 @@
   (let [new-state (collide-player-with-orbs state)
         old-orb-count (count (:orbs state))
         new-orb-count (count (:orbs new-state))]
+    ;; if the orb count changed, play the "picked up an orb" sound
     (if (not= old-orb-count new-orb-count)
       (.play orb-bling-sound))
-    new-state))
+    ;; if no orbs are left, switch to the completion menu
+    (if (and (= 0 new-orb-count)
+             (= (:gamemode state) :playing))
+      (assoc new-state :gamemode :victorymenu)
+      new-state)))
