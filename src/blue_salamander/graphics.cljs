@@ -220,11 +220,11 @@ and values as the texture."
                 menutop (* h 0.6)]
             (if (= mode :victorymenu)
               ;; got all orbs, show completion screen
-              (dom/div #js {:style #js {:display "flex" :flex-direction "column" :position "absolute" :top "0px" :left "0px" :width w :height h :color "white" :fontSize 30}}
+              (dom/div #js {:style #js {:display "flex" :flexDirection "column" :position "absolute" :top "0px" :left "0px" :width w :height h :color "white" :fontSize 30}}
                        (dom/div #js {:style #js {:margin "auto"}} "All orbs gathered!")
                        (dom/div #js {:style #js {:margin "auto"}} "Press space for new level"))
               ;; otherwise show startup screen
-              (dom/div #js {:style #js {:display "flex" :flex-direction "column" :position "absolute" :top "0px" :left "0px" :width w :height h :color "white" :fontSize 30}}
+              (dom/div #js {:style #js {:display "flex" :flexDirection "column" :position "absolute" :top "0px" :left "0px" :width w :height h :color "white" :fontSize 30}}
                        (dom/div #js {:style #js { :margin "auto"}} "Blue Salamander")
                        (dom/div #js {:style #js { :margin "auto"}} "Press space to start"))))))
 (def game-menu (om/factory GameMenu {:keyfn :key}))
@@ -245,7 +245,7 @@ and values as the texture."
                  mesh-assets :assets/meshes
                  mode :gamemode
                  orbdata :orbs} props
-                rendererprops {:width width :height height :rapidrender false}
+                rendererprops {:width width :height height :rapidrender false :style {:position "absolute" :top 0 :left 0}}
                 sceneprops (assoc rendererprops :camera "playercamera")]
             ;; until assets are loaded, just say "loading..."
             (if (or (nil? texture-assets)
@@ -271,7 +271,7 @@ and values as the texture."
                        (if (not= mode :playing)
                          (game-menu {:gamemode mode :width width :height height})
                          (dom/div #js
-                                  {:style #js {:position "absolute" :top "20px" :left "20px" :color "white" :fontSize 30}}
+                                  {:style #js { :position "absolute" :top "20px" :left "20px" :color "white" :fontSize 30}}
                                   (str "Orbs remaining: " (count orbdata)))))))))
 
 
@@ -282,6 +282,10 @@ and values as the texture."
                                    :root-unmount js/ReactTHREE.unmountComponentAtNode})]
     (om/add-root! reconciler
                   GameScreen
-                  (gdom/getElement "app"))))
+                  (gdom/getElement "app"))
+    ;; catch resize events and update the canvas
+    (aset js/window "onresize" (fn [] (swap! app-state #(assoc %
+                                                          :screen/width (.-innerWidth js/window)
+                                                          :screen/height (.-innerHeight js/window)))))))
 
 
