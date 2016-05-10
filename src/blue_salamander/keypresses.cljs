@@ -34,6 +34,7 @@
 (defn- process-key-down [keys-pressed-atom key-event]
   (let [key (.-keyCode key-event)]
     (swap! keys-pressed-atom #(conj % key))
+    (.preventDefault key-event)
     #_(js/console.log (str "key down: " key))))
 
 (defn- process-key-up [keys-pressed-atom key-event]
